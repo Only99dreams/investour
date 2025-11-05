@@ -9,6 +9,7 @@ const honeypotMiddleware = require('../middlewares/honeypotMiddleware');
 router.post('/login', 
   body('email').isEmail(),
   body('password').notEmpty(),
+  body('userType').isIn(['individual', 'group', 'firm']),
   authController.login
 );
 

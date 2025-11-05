@@ -14,6 +14,13 @@ const { sendVerificationEmail } = require('../utils/emailService');
 exports.login = async (req, res) => {
   try {
     const { email, password, userType } = req.body;
+     // ✅ ADD THIS VALIDATION
+    if (!email || !password || !userType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, password, and userType are required'
+      });
+    }
     const cleanPassword = password.trim();
     
     let user;
@@ -60,7 +67,20 @@ console.log('🔑 Password (quoted):', `"${password}"`);
         message: 'Invalid credentials'
       });
     }
+
+    // 👇 FETCH FULL USER DOCUMENT TO GET 'role'
+    const fullUser = await User.findById(user._id); // For individual
+    // For group/firm, use Group.findById or Firm.findById
     
+    // 👇 HANDLE ALL USER TYPES
+    let userRole = 'user';
+    if (userType === 'individual') {
+      userRole = fullUser?.role || 'user';
+    } else 
+    
+
+
+
     // Update last login
     user.lastLogin = new Date();
     user.loginCount += 1;
@@ -70,13 +90,13 @@ console.log('🔑 Password (quoted):', `"${password}"`);
     
     // Generate JWT tokens
     const accessToken = jwt.sign(
-      { id: user._id, userType: user.userType || userType },
+      { id: user._id, userType: user.userType || userType, role: userRole  },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
     
     const refreshToken = jwt.sign(
-      { id: user._id, userType: user.userType || userType },
+      { id: user._id, userType: user.userType || userType , role: userRole },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN }
     );
@@ -109,7 +129,8 @@ console.log('🔑 Password (quoted):', `"${password}"`);
       isGFE: user.isGFE,
       profilePhoto: user.profilePhoto,
       country: user.country,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      role: userRole
     };
     
     res.status(200).json({

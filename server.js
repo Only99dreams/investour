@@ -15,7 +15,12 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: true, // Reflects the request origin
+    credentials: true // Allows cookies
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -43,6 +48,7 @@ const referralRoutes = require('./routes/referralRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const advertisementRoutes = require('./routes/advertisementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -85,6 +91,26 @@ app.post('/debug-reset-password', async (req, res) => {
   await user.save();
   
   res.json({ success: true, message: 'Password reset successfully' });
+});
+
+// TEMPORARY: Password reset for testing
+app.post('/api/admin/reset-password', async (req, res) => {
+  const { email, newPassword } = req.body;
+  
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Set new password (will be hashed on save)
+    user.password = newPassword;
+    await user.save();
+    
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Reset failed', error: error.message });
+  }
 });
 
 

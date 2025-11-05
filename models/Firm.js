@@ -42,15 +42,15 @@ const firmSchema = new mongoose.Schema({
   },
   licenseNumber: {
     type: String,
-    required: [true, 'License number is required']
+    default: ''
   },
   licenseIssuingBody: {
     type: String,
-    required: [true, 'License issuing body is required']
+    default: ''
   },
   licenseDocument: {
     type: String,
-    required: [true, 'License document is required']
+    default: ''
   },
   logo: {
     type: String,

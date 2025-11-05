@@ -27,6 +27,12 @@ const groupSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*\.\w{2,}$/i, 'Please enter a valid email']
   },
+  password: { // 👈 ADD THIS FIELD
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false
+  },
   country: {
     type: String,
     required: [true, 'Country is required']
@@ -115,7 +121,6 @@ groupSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
-
 
 // Method to compare passwords
 groupSchema.methods.comparePassword = async function(candidatePassword) {

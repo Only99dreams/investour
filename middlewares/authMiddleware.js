@@ -55,7 +55,8 @@ exports.protect = async (req, res, next) => {
     // Grant access to protected route
     req.user = {
       id: user._id,
-      userType: decoded.userType
+      userType: decoded.userType,
+       role: user.role
     };
     next();
   } catch (err) {

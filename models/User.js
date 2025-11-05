@@ -144,7 +144,13 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  // Add this after `userType`
+role: {
+  type: String,
+  enum: ['user', 'admin', 'super_admin', 'finance', 'support', 'coordinator'],
+  default: 'user'
+}
 });
 
 // Hash password before saving
@@ -153,6 +159,8 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
+
+
 
 // Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword) {
