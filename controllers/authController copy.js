@@ -14,34 +14,25 @@ const { sendVerificationEmail } = require('../utils/emailService');
 exports.login = async (req, res) => {
   try {
     const { email, password, userType } = req.body;
-    
-    // ✅ Input validation
+     // ✅ ADD THIS VALIDATION
     if (!email || !password || !userType) {
       return res.status(400).json({
         success: false,
         message: 'Email, password, and userType are required'
       });
     }
-
-    const cleanEmail = email.toLowerCase().trim();
     const cleanPassword = password.trim();
     
-    console.log('🔍 LOGIN ATTEMPT');
-    console.log('📧 Clean email:', cleanEmail);
-    console.log('🔑 Password length:', cleanPassword.length);
-    
     let user;
-    
-    // ✅ FIXED: Consistent email query logic
     switch (userType) {
       case 'individual':
-        user = await User.findOne({ email: cleanEmail }).select('+password');
+        user = await User.findOne({ email }).select('+password');
         break;
       case 'group':
-        user = await Group.findOne({ contactEmail: cleanEmail }).select('+password');
+        user = await Group.findOne({ contactEmail: email }).select('+password');
         break;
       case 'firm':
-        user = await Firm.findOne({ businessEmail: cleanEmail }).select('+password');
+        user = await Firm.findOne({ businessEmail: email }).select('+password');
         break;
       default:
         return res.status(400).json({
@@ -50,139 +41,44 @@ exports.login = async (req, res) => {
         });
     }
     
-    console.log('👤 User found:', user ? 'Yes' : 'No');
-    
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials - User not found'
+        message: 'Invalid credentials'
       });
     }
 
-    // ✅ DEBUG: Check what's in the user object
-    console.log('📊 User object:', {
-      id: user._id,
-      email: user.email || user.contactEmail || user.businessEmail,
-      hasPassword: !!user.password,
-      passwordLength: user.password ? user.password.length : 0
-    });
 
-    // In your login function - REPLACE the password comparison part:
+   console.log('🔍 LOGIN ATTEMPT');
+console.log('📧 Request email:', email);
+console.log('📧 User email in DB:', user.email);
+console.log('matchCondition:', email === user.email);
+console.log('🔑 Password length:', password.length);
+console.log('🔑 Password (quoted):', `"${password}"`);
 
-console.log('🔐 Password comparison starting...');
 
-let isMatch = false;
-try {
-  // Method 1: Try direct bcrypt first
-  console.log('Testing direct bcrypt comparison...');
-  isMatch = await bcrypt.compare(cleanPassword, user.password);
-  console.log('Direct bcrypt result:', isMatch);
-  
-  // Method 2: If direct fails and method exists, try model method
-  if (!isMatch && typeof user.comparePassword === 'function') {
-    console.log('Trying model comparePassword method...');
-    isMatch = await user.comparePassword(cleanPassword);
-    console.log('Model method result:', isMatch);
-  }
-  
-  // Method 3: If still no match, check if it's a plain text password (for testing)
-  if (!isMatch && user.password === cleanPassword) {
-    console.log('⚠️  Plain text password match - needs hashing!');
-    isMatch = true;
-  }
-  
-} catch (error) {
-  console.error('🔐 Password comparison error:', error);
-}
 
-console.log('🔐 Final match result:', isMatch);
-
-if (!isMatch) {
-  return res.status(401).json({
-    success: false,
-    message: 'Invalid credentials - Password incorrect',
-    debug: {
-      inputPasswordLength: cleanPassword.length,
-      storedPasswordLength: user.password?.length,
-      isBcryptHash: user.password?.startsWith('$2b$')
+    
+    // Verify password
+    const isMatch = await user.comparePassword(cleanPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
-  });
-}
 
-    // ✅ FIXED: Role handling
+    // 👇 FETCH FULL USER DOCUMENT TO GET 'role'
+    const fullUser = await User.findById(user._id); // For individual
+    // For group/firm, use Group.findById or Firm.findById
+    
+    // 👇 HANDLE ALL USER TYPES
     let userRole = 'user';
     if (userType === 'individual') {
-      userRole = user.role || 'user';
-    } else if (userType === 'group') {
-      userRole = 'group';
-    } else if (userType === 'firm') {
-      userRole = 'firm';
-    }
+      userRole = fullUser?.role || 'user';
+    } else 
+    
 
-    // TEMPORARY DEBUG ROUTE - Add this to your authController.js
-exports.debugLogin = async (req, res) => {
-  try {
-    const { email, password, userType } = req.body;
-    
-    console.log('=== DEBUG LOGIN START ===');
-    console.log('Input:', { email, password, userType });
-    
-    const cleanEmail = email.toLowerCase().trim();
-    const cleanPassword = password.trim();
-    
-    let user;
-    switch (userType) {
-      case 'individual':
-        user = await User.findOne({ email: cleanEmail }).select('+password');
-        break;
-      case 'group':
-        user = await Group.findOne({ contactEmail: cleanEmail }).select('+password');
-        break;
-      case 'firm':
-        user = await Firm.findOne({ businessEmail: cleanEmail }).select('+password');
-        break;
-    }
-    
-    if (!user) {
-      console.log('❌ User not found');
-      return res.json({ error: 'User not found' });
-    }
-    
-    console.log('✅ User found:', {
-      id: user._id,
-      email: user.email || user.contactEmail || user.businessEmail,
-      passwordExists: !!user.password,
-      passwordLength: user.password ? user.password.length : 0,
-      passwordStartsWith: user.password ? user.password.substring(0, 20) + '...' : 'none'
-    });
-    
-    // Test direct bcrypt comparison
-    const directCompare = await bcrypt.compare(cleanPassword, user.password);
-    console.log('🔐 Direct bcrypt.compare result:', directCompare);
-    
-    // Test model method if exists
-    let methodCompare = false;
-    if (typeof user.comparePassword === 'function') {
-      methodCompare = await user.comparePassword(cleanPassword);
-      console.log('🔐 Model comparePassword result:', methodCompare);
-    } else {
-      console.log('❌ comparePassword method not found in model');
-    }
-    
-    console.log('=== DEBUG LOGIN END ===');
-    
-    res.json({
-      userExists: true,
-      directBcryptMatch: directCompare,
-      modelMethodMatch: methodCompare,
-      passwordHash: user.password ? user.password.substring(0, 30) + '...' : 'none'
-    });
-    
-  } catch (error) {
-    console.error('Debug error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
 
 
     // Update last login

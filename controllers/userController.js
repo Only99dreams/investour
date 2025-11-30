@@ -45,14 +45,14 @@ exports.signupIndividual = async (req, res) => {
             });
           }
           
-          const salt = await bcrypt.genSalt(12);
-          const hashedPassword = await bcrypt.hash(password, salt);
+         // const salt = await bcrypt.genSalt(12);
+          //const hashedPassword = await bcrypt.hash(password, salt);
           
           const user = new User({
             fullName,
             email,
             phone,
-            password: hashedPassword,
+            password: password,
             country,
             gender: gender || 'Prefer not to say',
             disability: disability || 'Prefer not to say',
@@ -237,8 +237,8 @@ exports.signupGroup = async (req, res) => {
           }
 
           // ✅ Hash password before saving
-          const salt = await bcrypt.genSalt(12);
-          const hashedPassword = await bcrypt.hash(password, salt);
+         // const salt = await bcrypt.genSalt(12);
+         // const hashedPassword = await bcrypt.hash(password, salt);
           
           const group = new Group({
             groupName,
@@ -246,7 +246,7 @@ exports.signupGroup = async (req, res) => {
             contactPerson,
             contactPhone,
             contactEmail,
-            password: hashedPassword,
+            password: password,
             country,
             region,
             referralCode: referralCode || '',
